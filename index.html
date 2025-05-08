@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Sorteio Nivus 2025</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #000;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    img {
+      max-width: 100%;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .numero {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
+      margin: 5px;
+      background: #fff;
+      color: #000;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .numero.selecionado {
+      background: #0f0;
+      color: #000;
+    }
+
+    .numero.comprado {
+      background: #444;
+      color: #888;
+      pointer-events: none;
+    }
+
+    #resumo, #formulario, #pixArea {
+      margin-top: 20px;
+    }
+
+    input {
+      padding: 10px;
+      margin: 5px;
+      width: 80%;
+      max-width: 300px;
+    }
+
+    button {
+      padding: 12px 30px;
+      font-size: 16px;
+      background: #00cc66;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #00e673;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Sorteio Nivus 2025</h1>
+  <h3>Por Bianca_Novaes</h3>
+  <button id="pagar" style="margin: 20px;">Pagar via Pix</button>
+
+  <img src="https://via.placeholder.com/600x300?text=Sorteio+Nivus+2025" alt="Imagem do Sorteio">
+
+  <p>Escolha seus números (R$1,00 cada):</p>
+  <div id="numeros"></div>
+
+  <div id="resumo">
+    Total Selecionado: <span id="total">0</span><br>
+    Valor Total: R$<span id="valor">0.00</span>
+  </div>
+
+  <div id="formulario" style="display:none;">
+    <h3>Confirme seus dados</h3>
+    <input type="text" id="nome" placeholder="Seu nome"><br>
+    <input type="text" id="whats" placeholder="WhatsApp com DDD"><br>
+    <button onclick="gerarPix()">Confirmar e Ver QR Code</button>
+  </div>
+
+  <div id="pixArea" style="display:none;">
+    <h3>Pagamento via Pix</h3>
+    <p>Escaneie o QR Code ou copie o código Pix abaixo:</p>
+    <img src="https://via.placeholder.com/250x250?text=QR+Code+Pix" alt="QR Code Pix"><br><br>
+    <strong>Código Pix:</strong><br>
+    <p id="codigoPix" style="word-break: break-all;">0cad779b-750a-483e-b680-a0f667c55f79</p>
+    <p>Após o pagamento, envie o comprovante para nosso WhatsApp.</p>
+  </div>
+
+  <script>
+    const container = document.getElementById("numeros");
+    const totalSpan = document.getElementById("total");
+    const valorSpan = document.getElementById("valor");
+    const pagarBtn = document.getElementById("pagar");
+
+    let selecionados = new Set();
+    let comprados = []; // Em sistema real, deve vir do banco de dados
+
+    // Função para verificar se o número foi comprado e se está dentro do prazo de 12 horas
+    function verificarCompra(numero) {
+      const compraInfo = JSON.parse(localStorage.getItem(numero));
+      if (!compraInfo) return false;
+
+      // Verifica se já passaram as 12 horas
+      const tempoRestante = compraInfo.expiracao - Date.now();
+      if (tempoRestante > 0) {
+        return false; // Se o tempo não passou, ainda está bloqueado
+      }
+
+      // Se passou 12 horas, se torna permanentemente inativo após a confirmação
+      return compraInfo.confirmado;
+    }
+
+    // Criação dos números
+    for (let i = 1; i <= 500; i++) {
+      const div = document.createElement("div");
+      div.textContent = i;
+      div.className = "numero";
+
+      // Verificar se o número já foi comprado e se está bloqueado
+      if (verificarCompra(i)) {
+        div.classList.add("comprado");
+        div.onclick = null;
+      }
+
+      div.onclick = () => {
+        if (selecionados.has(i)) {
+          selecionados.delete(i);
+          div.classList.remove("selecionado");
+        } else {
+          selecionados.add(i);
+          div.classList.add("selecionado");
+        }
+        atualizarResumo();
+      };
+      container.appendChild(div);
+    }
+
+    function atualizarResumo() {
+      const total = selecionados.size;
+      totalSpan.textContent = total;
+      valorSpan.textContent = (total * 1).toFixed(2);
+    }
+
+    pagarBtn.onclick = () => {
+      if (selecionados.size === 0) {
+        alert("Selecione ao menos um número.");
+        return;
+      }
+      document.getElementById("formulario").style.display = "block";
+      window.scrollTo(0, document.body.scrollHeight);
+    };
+
+    function gerarPix() {
+      const nome = document.getElementById("nome").value.trim();
+      const whats = document.getElementById("whats").value.trim();
+      if (!nome || !whats) {
+        alert("Preencha nome e WhatsApp.");
+        return;
+      }
+
+      const numeros = Array.from(selecionados);
+      const valor = (numeros.length * 1).toFixed(2);
+
+      console.log("Comprador:", { nome, whats, numeros, valor });
+
+      numeros.forEach(n => {
+        const el = Array.from(document.getElementsByClassName("numero"))
+          .find(d => parseInt(d.textContent) === n);
+        if (el) {
+          el.classList.remove("selecionado");
+          el.classList.add("comprado");
+          el.onclick = null;
+        }
+
+        // Salvar informação da compra no LocalStorage com o tempo de expiração
+        const expirarEm = Date.now() + 12 * 60 * 60 * 1000; // 12 horas de expiração
+        const compraInfo = { expiracao: expirarEm, confirmado: false };
+        localStorage.setItem(n, JSON.stringify(compraInfo));
+      });
+
+      selecionados.clear();
+      atualizarResumo();
+      document.getElementById("formulario").style.display = "none";
+      document.getElementById("pixArea").style.display = "block";
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+  </script>
+
+</body>
+</html>
